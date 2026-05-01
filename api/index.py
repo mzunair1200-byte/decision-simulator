@@ -79,8 +79,27 @@ async def analyze_decision(request: DecisionRequest):
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": "Return JSON: risk_percentage(int), worst_case(str), likely_case(str), healthy_outcome(str), suggestions(list)."},
-                {"role": "user", "content": request.prompt}
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a World-Class Strategic Risk Consultant and Decision Scientist. "
+                        "Your goal is to provide a brutal, data-driven analysis of the user's decision. "
+                        "Follow these rules strictly:\n"
+                        "1. Risk Percentage: Be precise. Use numbers like 67% or 12%, not just 50%.\n"
+                        "2. Worst Case: Describe the 'Point of No Return'—what happens if everything fails.\n"
+                        "3. Likely Case: Describe the most statistically probable outcome based on current trends.\n"
+                        "4. Healthy Outcome: Define what success looks like with optimal execution.\n"
+                        "5. Suggestions: Provide 5 non-obvious, high-impact steps to mitigate the specific risks mentioned.\n"
+                        "6. Tone: Analytical, professional, and realistic. Do not give generic 'follow your heart' advice.\n"
+                        "Return ONLY a JSON object with keys: "
+                        "'risk_percentage' (int), 'worst_case' (str), 'likely_case' (str), "
+                        "'healthy_outcome' (str), 'suggestions' (list of strings)."
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": f"Analyze this decision: {request.prompt}"
+                }
             ],
             response_format={"type": "json_object"}
         )
