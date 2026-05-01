@@ -1,28 +1,35 @@
 "use client";
-import { useState, useEffect, type FormEvent } from "react";
+import React, { useState, useEffect } from "react";
+
+// Defining the shape of our result to satisfy TypeScript
+interface SimulationResult {
+  risk_percentage: number;
+  worst_case: string;
+  likely_case: string;
+  healthy_outcome: string;
+  suggestions: string[];
+}
 
 export default function Home() {
   const [user, setUser] = useState<string | null>(null);
   const [emailInput, setEmailInput] = useState("");
   const [prompt, setPrompt] = useState("");
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<SimulationResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
 
-  // Check if user is already "logged in" locally
   useEffect(() => {
     const savedUser = localStorage.getItem("decision_user");
     if (savedUser) setUser(savedUser);
   }, []);
 
-  // Fetch history whenever the user state changes
   useEffect(() => {
     if (user) {
       fetchHistory();
     }
   }, [user]);
 
-  const handleLogin = (e: FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (!emailInput.trim()) return;
     localStorage.setItem("decision_user", emailInput);
@@ -39,7 +46,6 @@ export default function Home() {
   const fetchHistory = async () => {
     if (!user) return;
     try {
-      // CHANGED: Use relative path for Vercel
       const res = await fetch(`/api/history/${user}`);
       if (res.ok) {
         const data = await res.json();
@@ -51,10 +57,9 @@ export default function Home() {
   };
 
   const analyzeDecision = async () => {
-    if (!prompt.trim()) return;
+    if (!prompt.trim() || !user) return;
     setLoading(true);
     try {
-      // CHANGED: Use relative path for Vercel
       const response = await fetch("/api/predict", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -65,14 +70,13 @@ export default function Home() {
       
       const data = await response.json();
       setResult(data);
-      fetchHistory(); // Refresh history list
+      fetchHistory(); 
     } catch (error) {
-      alert("Error: Backend is not responding. Check if it is deployed correctly.");
+      alert("Error: Backend is not responding. Ensure your Database and API keys are set in Vercel.");
     }
     setLoading(false);
   };
 
-  // 1. LOGIN VIEW
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-900 text-white p-4">
@@ -87,7 +91,7 @@ export default function Home() {
             onChange={(e) => setEmailInput(e.target.value)}
             required
           />
-          <button className="w-full py-4 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold transition-all transform active:scale-95">
+          <button type="submit" className="w-full py-4 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold transition-all">
             Enter Dashboard
           </button>
         </form>
@@ -95,115 +99,70 @@ export default function Home() {
     );
   }
 
-  // 2. MAIN DASHBOARD VIEW
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 text-slate-900">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8 bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100">
+        <div className="flex justify-between items-center mb-8 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
           <div>
-            <h2 className="font-black text-2xl text-slate-900">Decision Engine</h2>
-            <p className="text-slate-500 text-sm">Analyze risks, simulate outcomes.</p>
+            <h2 className="font-black text-2xl">Decision Engine</h2>
+            <p className="text-slate-500 text-sm italic">User: {user}</p>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right hidden sm:block">
-              <p className="text-xs text-slate-400 uppercase font-bold">Logged in as</p>
-              <p className="text-slate-800 font-medium">{user}</p>
-            </div>
-            <button onClick={logout} className="p-2 px-4 bg-red-50 text-red-600 rounded-lg text-sm font-bold hover:bg-red-100 transition">
-              Logout
-            </button>
-          </div>
+          <button onClick={logout} className="px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-bold hover:bg-red-100">
+            Logout
+          </button>
         </div>
 
         <div className="space-y-6">
-          {/* Input Section */}
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
-            <label className="block text-sm font-bold text-slate-700 mb-2">What action are you considering?</label>
             <textarea
-              className="w-full p-4 border border-slate-200 rounded-2xl h-32 focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 bg-slate-50 transition-all"
-              placeholder="e.g. Should I invest in a professional coding bootcamp or self-learn?"
+              className="w-full p-4 border border-slate-200 rounded-2xl h-32 focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50"
+              placeholder="e.g. Should I start a business?"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
             />
             <button
               onClick={analyzeDecision}
               disabled={loading || !prompt}
-              className="w-full mt-4 py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+              className="w-full mt-4 py-4 bg-slate-900 text-white rounded-2xl font-bold disabled:opacity-50"
             >
-              {loading ? "AI is simulating outcomes..." : "Run Decision Simulation"}
+              {loading ? "Simulating..." : "Analyze Risk"}
             </button>
           </div>
 
-          {/* AI Result Section */}
           {result && (
-            <div className="grid grid-cols-1 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="grid grid-cols-1 gap-6">
               <div className="bg-white p-6 rounded-3xl shadow-sm border-l-8 border-l-blue-600 flex justify-between items-center">
-                <div>
-                  <h3 className="text-lg font-bold text-slate-800">Risk Measurement</h3>
-                  <p className="text-slate-500">Probability of failure/complexity</p>
-                </div>
-                <div className={`text-5xl font-black ${result.risk_percentage > 60 ? 'text-red-500' : 'text-green-500'}`}>
-                  {result.risk_percentage}%
-                </div>
+                <h3 className="text-lg font-bold">Risk Level</h3>
+                <div className="text-4xl font-black text-blue-600">{result.risk_percentage}%</div>
               </div>
-
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-6 bg-red-50 rounded-3xl border border-red-100">
-                  <h4 className="font-black text-red-700 mb-2 uppercase text-xs tracking-widest">Worst Case</h4>
-                  <p className="text-sm text-slate-800 leading-relaxed font-medium">{result.worst_case}</p>
+                <div className="p-4 bg-red-50 rounded-2xl border border-red-100 text-sm">
+                  <span className="font-bold text-red-700">Worst:</span> {result.worst_case}
                 </div>
-                <div className="p-6 bg-amber-50 rounded-3xl border border-amber-100">
-                  <h4 className="font-black text-amber-700 mb-2 uppercase text-xs tracking-widest">Likely Outcome</h4>
-                  <p className="text-sm text-slate-800 leading-relaxed font-medium">{result.likely_case}</p>
+                <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 text-sm">
+                  <span className="font-bold text-amber-700">Likely:</span> {result.likely_case}
                 </div>
-                <div className="p-6 bg-emerald-50 rounded-3xl border border-emerald-100">
-                  <h4 className="font-black text-emerald-700 mb-2 uppercase text-xs tracking-widest">Healthy Growth</h4>
-                  <p className="text-sm text-slate-800 leading-relaxed font-medium">{result.healthy_outcome}</p>
+                <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 text-sm">
+                  <span className="font-bold text-emerald-700">Healthy:</span> {result.healthy_outcome}
                 </div>
               </div>
-
-              <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
-                <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
-                   Strategic Suggestions
-                </h4>
-                <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {result.suggestions.map((s: string, i: number) => (
-                    <li key={i} className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl text-slate-700 text-sm">
-                      <span className="bg-blue-600 text-white rounded-lg h-6 w-6 flex-shrink-0 flex items-center justify-center text-xs font-bold">
-                        {i + 1}
-                      </span>
-                      {s}
-                    </li>
-                  ))}
+              <div className="bg-white p-6 rounded-2xl border">
+                <h4 className="font-bold mb-2">Suggestions:</h4>
+                <ul className="list-disc pl-5 space-y-1">
+                   {result.suggestions.map((s, i) => <li key={i} className="text-sm">{s}</li>)}
                 </ul>
               </div>
             </div>
           )}
 
-          {/* History Section */}
           {history.length > 0 && (
-            <div className="mt-12">
-              <div className="flex items-center justify-between mb-4 px-2">
-                <h3 className="text-xl font-bold text-slate-800">Recent History</h3>
-                <span className="text-xs font-bold bg-slate-200 text-slate-600 px-2 py-1 rounded-full">
-                  {history.length} Saved
-                </span>
-              </div>
+            <div className="mt-8">
+              <h3 className="font-bold mb-4">Previous Searches</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {history.map((item) => (
-                  <div key={item.id} className="p-4 bg-white rounded-2xl shadow-sm border border-slate-100 hover:border-blue-300 transition-colors cursor-pointer group">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${item.risk_percentage > 60 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
-                        {item.risk_percentage}% Risk
-                      </div>
-                      <p className="text-[10px] text-slate-400 font-medium">
-                        {new Date(item.timestamp).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <p className="font-bold text-slate-800 line-clamp-2 text-sm group-hover:text-blue-600 transition-colors">
-                      {item.prompt}
-                    </p>
+                {history.map((h) => (
+                  <div key={h.id} className="p-4 bg-white border rounded-xl flex justify-between items-center">
+                    <span className="truncate text-sm font-medium">{h.prompt}</span>
+                    <span className="text-blue-600 font-bold">{h.risk_percentage}%</span>
                   </div>
                 ))}
               </div>
