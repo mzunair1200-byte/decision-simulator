@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+🚀 StrategyEngine: AI-Powered Decision Simulator
+StrategyEngine is a full-stack Decision Support System (DSS) that uses advanced AI to simulate potential outcomes and calculate risk factors for any scenario. Whether you're considering a business pivot, a financial investment, or a career move, StrategyEngine provides a data-driven "Strategic Audit" to help you decide.
+![alt text](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)
 
-## Getting Started
+![alt text](https://img.shields.io/badge/FastAPI-Python-009688?style=flat-square&logo=fastapi)
 
-First, run the development server:
+![alt text](https://img.shields.io/badge/AI-Llama_3.3_70B-orange?style=flat-square)
 
-```bash
+![alt text](https://img.shields.io/badge/Database-Vercel_Postgres-blue?style=flat-square&logo=postgresql)
+✨ Features
+Strategic Risk Audit: Generates a precise Risk Percentage and simulates "Worst Case," "Likely Case," and "Healthy Outcome" scenarios.
+AI-Driven Insights: Powered by Llama 3.3 70B via Groq for ultra-fast, professional-grade strategic advice.
+Audit Trail: Automatically saves simulation history to Vercel Postgres so users can track their decision logic over time.
+Professional Dashboard: A sleek, modern UI built with Next.js, Tailwind CSS, and Framer Motion for smooth animations.
+One-Click Share: Easily copy your strategic report to the clipboard to share with team members or advisors.
+🛠️ Tech Stack
+Frontend
+Framework: Next.js 15 (App Router)
+Styling: Tailwind CSS + Lucide Icons
+Animations: Framer Motion
+Authentication: Local-storage based User Management (MVP)
+Backend
+Framework: FastAPI (Python 3.12)
+AI Inference: Groq SDK (Llama 3.3 70B Model)
+ORM: SQLModel (SQLAlchemy 2.0 based)
+Database: Vercel Postgres (Serverless)
+🏗️ Architecture
+The application is built as a monorepo optimized for Vercel:
+The /frontend (root) handles the user interface and client-side logic.
+The /api folder contains the Python serverless functions that interact with the Groq AI and the PostgreSQL database.
+Traffic is routed via vercel.json rewrites.
+🚀 Installation & Setup
+1. Clone the repo
+code
+Bash
+git clone https://github.com/your-username/decision-simulator.git
+cd decision-simulator
+2. Frontend Setup
+code
+Bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+3. Backend Setup
+code
+Bash
+cd api
+python -m venv venv
+source venv/bin/activate  # Or .\venv\Scripts\activate on Windows
+pip install -r requirements.txt
+python -m uvicorn index:app --reload
+4. Environment Variables
+Create a .env file in the root:
+code
+Text
+GROQ_API_KEY=your_key
+POSTGRES_URL=your_vercel_postgres_url
+📈 Roadmap
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Implement Google OAuth (NextAuth.js)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Export analysis as PDF reports
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Add Multi-variable "What If" scenarios
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Visual Risk Matrix charts (High Impact vs High Probability)
+🤝 Contributing
+Contributions are welcome! Feel free to open an issue or submit a pull request.
+📝 License
+Distributed under the MIT License.
+Developed with ❤️ by MUHAMMAD ZUNAIR 
