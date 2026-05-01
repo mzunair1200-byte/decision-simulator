@@ -1,10 +1,10 @@
-const nextConfig = {
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
   eslint: {
-    // This ignores ESLint errors during build
     ignoreDuringBuilds: true,
   },
   typescript: {
-    // This ignores TypeScript type errors during build
     ignoreBuildErrors: true, 
   },
 };
