@@ -13,7 +13,7 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
-    "ignoreDeprecations": "5.0",  // Add this to hide the warning
+    "ignoreDeprecations": "6.0",  // Add this to hide the warning
     "plugins": [
       {
         "name": "next"

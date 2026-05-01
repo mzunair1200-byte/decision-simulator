@@ -12,22 +12,21 @@ from sqlmodel import Field, SQLModel, create_engine, Session, select
 load_dotenv()
 
 # --- DATABASE CONFIGURATION ---
+# Guard against missing URL
 DATABASE_URL = os.environ.get("POSTGRES_URL") 
-if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
-    # Critical fix for SQLAlchemy 2.0+ compatibility with Vercel Postgres
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-else:
-    # Fallback for local development
-    DATABASE_URL = "sqlite:///./database.db"
 
-# Create engine
+if not DATABASE_URL:
+    print("WARNING: POSTGRES_URL not found, falling back to SQLite")
+    DATABASE_URL = "sqlite:///./database.db"
+elif DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+# Create engine with a shorter timeout for serverless
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
 # --- MODELS ---
 class Decision(SQLModel, table=True):
-    # FIX: This prevents the "Table already defined" error on Vercel redeploys
     __table_args__ = {"extend_existing": True} 
-
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str
     prompt: str
@@ -35,21 +34,11 @@ class Decision(SQLModel, table=True):
     worst_case: str
     likely_case: str
     healthy_outcome: str
-    suggestions: str  # Stored as JSON string
-    # FIX: Updated for Python 3.12 compatibility
+    suggestions: str  
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-# Create tables logic
-def create_db_and_tables():
-    SQLModel.metadata.create_all(engine)
 
 # --- APP SETUP ---
 app = FastAPI()
-
-# Create tables on startup
-@app.on_event("startup")
-def on_startup():
-    create_db_and_tables()
 
 app.add_middleware(
     CORSMiddleware, 
@@ -58,8 +47,11 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-# Initialize Groq
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+# Initialize Groq with a guard
+GRO_KEY = os.environ.get("GROQ_API_KEY")
+client = None
+if GRO_KEY:
+    client = Groq(api_key=GRO_KEY)
 
 class DecisionRequest(BaseModel):
     prompt: str
@@ -69,28 +61,32 @@ class DecisionRequest(BaseModel):
 
 @app.get("/api/python")
 def hello():
-    return {"message": "Backend is active and database is connected!"}
+    return {
+        "status": "online",
+        "database": "connected" if "postgresql" in DATABASE_URL else "sqlite",
+        "ai_ready": client is not None
+    }
 
 @app.post("/api/predict")
 async def analyze_decision(request: DecisionRequest):
+    if not client:
+        raise HTTPException(status_code=500, detail="GROQ_API_KEY is not configured in Vercel")
+    
     try:
-        # 1. AI Analysis via Groq
+        # Create tables right before we need them (Safe for Serverless)
+        SQLModel.metadata.create_all(engine)
+
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {
-                    "role": "system", 
-                    "content": "You are a risk analyst. Analyze the user's prompt and return ONLY a JSON object with keys: risk_percentage (int), worst_case (str), likely_case (str), healthy_outcome (str), suggestions (list of strings)."
-                },
+                {"role": "system", "content": "Return JSON: risk_percentage(int), worst_case(str), likely_case(str), healthy_outcome(str), suggestions(list)."},
                 {"role": "user", "content": request.prompt}
             ],
             response_format={"type": "json_object"}
         )
         
-        # Parse AI response
         ai_data = json.loads(completion.choices[0].message.content)
 
-        # 2. Save to Database
         with Session(engine) as session:
             new_decision = Decision(
                 username=request.username,
@@ -106,33 +102,28 @@ async def analyze_decision(request: DecisionRequest):
             session.refresh(new_decision)
 
         return ai_data
-
     except Exception as e:
-        print(f"Error during prediction: {str(e)}")
+        print(f"Prediction Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/history/{username}")
 async def get_history(username: str):
     try:
+        SQLModel.metadata.create_all(engine)
         with Session(engine) as session:
-            # Query history for the specific user
             statement = select(Decision).where(Decision.username == username).order_by(Decision.id.desc())
             results = session.exec(statement).all()
             
-            # Prepare data for frontend
-            history_list = []
-            for r in results:
-                history_list.append({
-                    "id": r.id,
-                    "prompt": r.prompt,
-                    "risk_percentage": r.risk_percentage,
-                    "worst_case": r.worst_case,
-                    "likely_case": r.likely_case,
-                    "healthy_outcome": r.healthy_outcome,
-                    "suggestions": json.loads(r.suggestions),
-                    "timestamp": r.timestamp
-                })
-            return history_list
+            return [{
+                "id": r.id,
+                "prompt": r.prompt,
+                "risk_percentage": r.risk_percentage,
+                "worst_case": r.worst_case,
+                "likely_case": r.likely_case,
+                "healthy_outcome": r.healthy_outcome,
+                "suggestions": json.loads(r.suggestions),
+                "timestamp": r.timestamp
+            } for r in results]
     except Exception as e:
-        print(f"Error fetching history: {str(e)}")
+        print(f"History Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
