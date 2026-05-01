@@ -10,6 +10,26 @@ from dotenv import load_dotenv
 from sqlmodel import Field, SQLModel, create_engine, Session, select
 
 load_dotenv()
+from datetime import datetime, timezone # Update this import
+
+# ... (Database config stays the same)
+
+class Decision(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    username: str
+    prompt: str
+    risk_percentage: int
+    worst_case: str
+    likely_case: str
+    healthy_outcome: str
+    suggestions: str 
+    # Use timezone-aware UTC
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Create tables logic
+@app.on_event("startup")
+def on_startup():
+    SQLModel.metadata.create_all(engine)
 
 # --- DATABASE CONFIGURATION ---
 # Vercel provides POSTGRES_URL. Locally, we use SQLite.
