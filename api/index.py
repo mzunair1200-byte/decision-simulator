@@ -10,6 +10,21 @@ from dotenv import load_dotenv
 from sqlmodel import Field, SQLModel, create_engine, Session, select
 
 load_dotenv()
+# --- APP SETUP ---
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware, 
+    allow_origins=["*"], 
+    allow_methods=["*"], 
+    allow_headers=["*"]
+)
+
+client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+
+class DecisionRequest(BaseModel):
+    prompt: str
+    username: str
 from datetime import datetime, timezone # Update this import
 
 # ... (Database config stays the same)
@@ -25,6 +40,7 @@ class Decision(SQLModel, table=True):
     suggestions: str 
     # Use timezone-aware UTC
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    
 
 # Create tables logic
 @app.on_event("startup")
@@ -57,21 +73,7 @@ class Decision(SQLModel, table=True):
 # Create tables if they don't exist
 SQLModel.metadata.create_all(engine)
 
-# --- APP SETUP ---
-app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware, 
-    allow_origins=["*"], 
-    allow_methods=["*"], 
-    allow_headers=["*"]
-)
-
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
-
-class DecisionRequest(BaseModel):
-    prompt: str
-    username: str
 
 # --- ROUTES ---
 
